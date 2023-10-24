@@ -2,7 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import {expressValidator, registerValidator} from './validators';
+import {expressValidator, loginValidator, registerValidator} from './validators';
 import {authController} from './controllers/AuthController';
 
 const port = 8888;
@@ -20,3 +20,4 @@ app.listen(port, () => {
 mongoose.connection.on('connected', () => console.log('Подключение к DB установлено'));
 
 app.post('/auth/register', registerValidator, expressValidator, authController.registerController);
+app.post('/auth/login', loginValidator, expressValidator, authController.loginController);
