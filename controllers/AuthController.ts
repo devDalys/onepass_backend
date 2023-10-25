@@ -41,7 +41,7 @@ const registerController = async (req: Request<any, any, RegisterRequest>, res: 
     });
   } catch (e) {
     console.error(e);
-    sendError({res, errorCode: 400, messageText: 'Произошла ошибка авторизаии'});
+    sendError({res, errorCode: 400, messageText: 'Произошла ошибка регистрации'});
   }
 };
 
