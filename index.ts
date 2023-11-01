@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import {expressValidator, loginValidator, registerValidator} from './validators';
 import {authController} from './controllers/AuthController';
+import {accountsController} from './controllers/AccountsController';
 
 const port = 8888;
 const dbUrl = 'mongodb://127.0.0.1:27017';
@@ -21,3 +22,4 @@ mongoose.connection.on('connected', () => console.log('Подключение к
 
 app.post('/auth/register', registerValidator, expressValidator, authController.registerController);
 app.post('/auth/login', loginValidator, expressValidator, authController.loginController);
+app.post('/accounts/add', accountsController.addAccount);

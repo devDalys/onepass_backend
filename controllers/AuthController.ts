@@ -32,7 +32,7 @@ const registerController = async (req: Request<any, any, RegisterRequest>, res: 
 
     const doc = await user.save();
 
-    const token = jwt.sign({_id: doc._id}, `${process.env.SECRET_KEY}`);
+    const token = jwt.sign({_id: doc._id}, `${process.env.JWT_SECRET}`);
     const {password: _pass, ...otherData} = doc.toObject();
 
     sendSuccess(res, {
@@ -57,7 +57,7 @@ const loginController = async (req: Request<any, any, LoginRequest>, res: Respon
     }
 
     const isValidPath = await bcrypt.compare(password, user.password);
-    console.log(process.env.SECRET);
+
     if (isValidPath) {
       const token = jwt.sign(
         {
