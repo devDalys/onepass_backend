@@ -63,7 +63,7 @@ const loginController = async (req: Request<any, any, LoginRequest>, res: Respon
         {
           _id: user._id,
         },
-        `${process.env.SECRET_KEY}`,
+        `${process.env.JWT_SECRET}`,
         {
           expiresIn: '30d',
         },
