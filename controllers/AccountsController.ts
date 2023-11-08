@@ -14,7 +14,6 @@ const addAccount = async (req: Request<any, any, Account>, res: Response, next: 
   try {
     const token = req.headers.token as string;
     const id = jwt.verify(token, `${process.env.JWT_SECRET}`) as {_id: string};
-    console.log(token);
 
     await UserModel.updateOne(
       {_id: id},
@@ -36,7 +35,7 @@ const getAccounts = async (req: Request, res: Response, next: NextFunction) => {
     const id = jwt.verify(token, `${process.env.JWT_SECRET}`) as {_id: string};
     const user = await UserModel.findById(id);
     if (user && 'accounts' in user) {
-      sendSuccess(res, user.accounts);
+      sendSuccess(res, {body: user.accounts});
     } else {
       console.error('Не удалось получить аккаунты');
       sendError({res, errorCode: 500, messageText: 'Аккаунтов нет'});

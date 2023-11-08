@@ -4,6 +4,7 @@ const AccountSchema = new mongoose.Schema({
   login: String,
   password: String,
   iconSrc: String,
+  socialName: String,
 });
 
 const users = new mongoose.Schema(
