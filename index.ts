@@ -25,4 +25,5 @@ mongoose.connection.on('connected', () => console.log('Подключение к
 app.post('/auth/register', registerValidator, expressValidator, authController.registerController);
 app.post('/auth/login', loginValidator, expressValidator, authController.loginController);
 app.post('/accounts/add', checkAuth, addAccountValidator, expressValidator, accountsController.addAccount);
+app.get('/auth/me', checkAuth, authController.getMeController);
 app.get('/accounts', checkAuth, accountsController.getAccounts);

@@ -18,6 +18,10 @@ const users = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    avatarUrl: {
+      type: String,
+      required: false,
+    },
     password: {
       type: String,
       required: true,

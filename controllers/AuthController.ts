@@ -79,7 +79,28 @@ const loginController = async (req: Request<any, any, LoginRequest>, res: Respon
   }
 };
 
+export const getMeController = async (req: Request<any, any, LoginRequest>, res: Response) => {
+  try {
+    const token = req.headers.token as string;
+    const id = jwt.verify(token, `${process.env.JWT_SECRET}`) as {_id: string};
+
+    const user = await UserModel.findById(id);
+
+    if (!user) {
+      console.error('не получилось получить пользователя');
+      return sendError({res, errorCode: 403, messageText: 'Доступ закрыт'});
+    }
+
+    const {password, accounts, ...userInfo} = user.toObject();
+    sendSuccess(res, userInfo);
+  } catch (e) {
+    console.error(e, 'не получилось получить пользователя');
+    sendError({res, errorCode: 403, messageText: 'Доступ закрыт'});
+  }
+};
+
 export const authController = {
   registerController,
   loginController,
+  getMeController,
 };
