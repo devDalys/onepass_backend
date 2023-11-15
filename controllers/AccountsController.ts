@@ -2,7 +2,7 @@ import {NextFunction, Request, Response} from 'express';
 import UserModel from '../models/users';
 import jwt from 'jsonwebtoken';
 import {sendError, sendSuccess} from '../utils/SendError';
-import Users from '../models/users';
+import {saveCache} from '../utils/SaveCache';
 
 interface Account {
   login: string;
@@ -35,6 +35,7 @@ const getAccounts = async (req: Request, res: Response, next: NextFunction) => {
     const id = jwt.verify(token, `${process.env.JWT_SECRET}`) as {_id: string};
     const user = await UserModel.findById(id);
     if (user && 'accounts' in user) {
+      saveCache(req, user.accounts);
       sendSuccess(res, {body: user.accounts});
     } else {
       console.error('Не удалось получить аккаунты');

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import UserModel from '../models/users';
 import {sendError, sendSuccess} from '../utils/SendError';
+import {saveCache} from '../utils/SaveCache';
 
 interface RegisterRequest {
   email: string;
@@ -92,6 +93,7 @@ export const getMeController = async (req: Request<any, any, LoginRequest>, res:
     }
 
     const {password, accounts, ...userInfo} = user.toObject();
+    saveCache(req, userInfo);
     sendSuccess(res, userInfo);
   } catch (e) {
     console.error(e, 'не получилось получить пользователя');

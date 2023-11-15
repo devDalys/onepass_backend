@@ -1,4 +1,5 @@
 import * as express from 'express';
+import {cache} from '../index';
 export const HTTP_CLIENT_ERROR_CODES = {
   badRequest: 400,
   unauthorized: 401,
@@ -22,11 +23,10 @@ export const HTTP_RESPONSE_CODES = {
 } as const;
 
 type FailureProps = {
-  res: express.Response,
-  errorCode: typeof HTTP_ERROR_CODES[keyof typeof HTTP_ERROR_CODES],
-  messageText: string
-}
-
+  res: express.Response;
+  errorCode: (typeof HTTP_ERROR_CODES)[keyof typeof HTTP_ERROR_CODES];
+  messageText: string;
+};
 
 export const sendError = ({res, errorCode, messageText}: FailureProps) => {
   return res.status(errorCode).json({
@@ -35,6 +35,11 @@ export const sendError = ({res, errorCode, messageText}: FailureProps) => {
 };
 
 export const sendSuccess = (res: express.Response, data: any) => {
+  if (res.req.method === 'POST') {
+    const key = res.req.headers.token + res.req.url.split('/')[1];
+    cache.delete(key);
+  }
+
   return res.json({
     ...data,
     status: 200,
