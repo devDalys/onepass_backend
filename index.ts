@@ -35,9 +35,12 @@ app.listen(port, () => {
   mongoose.connect(dbUrl, {dbName: 'onepass'});
 });
 mongoose.connection.on('connected', () => console.log('Подключение к DB установлено'));
-
+//ручки авторизации
 app.post('/auth/register', registerValidator, expressValidator, authController.registerController);
 app.post('/auth/login', loginValidator, expressValidator, authController.loginController);
-app.post('/accounts/add', checkAuth, addAccountValidator, expressValidator, accountsController.addAccount);
 app.get('/auth/me', checkAuth, cacheController, authController.getMeController);
+//ручки работы с аккаунтами юзера
 app.get('/accounts', checkAuth, cacheController, accountsController.getAccounts);
+app.post('/accounts/add', checkAuth, addAccountValidator, expressValidator, accountsController.addAccount);
+app.delete('/accounts/:id', checkAuth, addAccountValidator, expressValidator, accountsController.addAccount);
+app.put('/accounts/update', checkAuth, addAccountValidator, expressValidator, accountsController.updateAccount);

@@ -73,6 +73,8 @@ const loginController = async (req: Request<any, any, LoginRequest>, res: Respon
       const {password, ...otherInfo} = user.toObject();
 
       return sendSuccess(res, {...otherInfo, token});
+    } else {
+      await Promise.reject('Неверный пароль');
     }
   } catch (e) {
     console.error(e);

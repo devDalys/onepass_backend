@@ -35,7 +35,7 @@ export const sendError = ({res, errorCode, messageText}: FailureProps) => {
 };
 
 export const sendSuccess = (res: express.Response, data: any) => {
-  if (res.req.method === 'POST') {
+  if (['POST', 'PUT'].includes(res.req.method)) {
     const key = res.req.headers.token + res.req.url.split('/')[1];
     cache.delete(key);
   }
