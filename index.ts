@@ -42,5 +42,5 @@ app.get('/auth/me', checkAuth, cacheController, authController.getMeController);
 //ручки работы с аккаунтами юзера
 app.get('/accounts', checkAuth, cacheController, accountsController.getAccounts);
 app.post('/accounts/add', checkAuth, addAccountValidator, expressValidator, accountsController.addAccount);
-app.delete('/accounts/:id', checkAuth, addAccountValidator, expressValidator, accountsController.addAccount);
+app.delete('/accounts/delete/:id', checkAuth, accountsController.deleteAccount);
 app.put('/accounts/update', checkAuth, addAccountValidator, expressValidator, accountsController.updateAccount);
