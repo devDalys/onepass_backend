@@ -86,7 +86,6 @@ const deleteAccount = async (req: Request<any, any, any>, res: Response, next: N
 
     const user = await UserModel.findById(userId);
 
-    console.log(user?.accounts, accountId);
     if (user) {
       user.accounts.pull({_id: accountId});
       user.save();
