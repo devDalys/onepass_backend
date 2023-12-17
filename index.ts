@@ -2,7 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import {expressValidator, loginValidator, registerValidator} from './validators';
+import {expressValidator, loginValidator, registerValidator, loginSocialController} from './validators';
 import {authController} from './controllers/AuthController';
 import {accountsController} from './controllers/AccountsController';
 import {checkAuth} from './utils/CheckAuth';
@@ -39,7 +39,8 @@ mongoose.connection.on('connected', () => console.log('Подключение к
 app.post('/auth/register', registerValidator, expressValidator, authController.registerController);
 app.post('/auth/login', loginValidator, expressValidator, authController.loginController);
 app.get('/auth/me', checkAuth, cacheController, authController.getMeController);
-app.post('/auth/login/vk', authController.socialLoginController);
+//ручки авторизации через соц. сети
+app.post('/auth/login/social', loginSocialController, expressValidator, authController.socialLoginController);
 //ручки работы с аккаунтами юзера
 app.get('/accounts', checkAuth, cacheController, accountsController.getAccounts);
 app.post('/accounts/add', checkAuth, addAccountValidator, expressValidator, accountsController.addAccount);

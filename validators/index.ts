@@ -1,2 +1,2 @@
-export {registerValidator, loginValidator} from './AuthValidator';
+export {registerValidator, loginValidator, loginSocialController} from './AuthValidator';
 export {expressValidator} from './ExpressValidator';
