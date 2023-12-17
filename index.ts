@@ -39,6 +39,7 @@ mongoose.connection.on('connected', () => console.log('Подключение к
 app.post('/auth/register', registerValidator, expressValidator, authController.registerController);
 app.post('/auth/login', loginValidator, expressValidator, authController.loginController);
 app.get('/auth/me', checkAuth, cacheController, authController.getMeController);
+app.post('/auth/login/vk', authController.socialLoginController);
 //ручки работы с аккаунтами юзера
 app.get('/accounts', checkAuth, cacheController, accountsController.getAccounts);
 app.post('/accounts/add', checkAuth, addAccountValidator, expressValidator, accountsController.addAccount);

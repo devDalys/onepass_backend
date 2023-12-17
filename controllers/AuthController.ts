@@ -4,17 +4,7 @@ import bcrypt from 'bcrypt';
 import UserModel from '../models/users';
 import {sendError, sendSuccess} from '../utils/SendError';
 import {saveCache} from '../utils/SaveCache';
-
-interface RegisterRequest {
-  email: string;
-  name: string;
-  password: string;
-}
-
-interface LoginRequest {
-  email: string;
-  password: string;
-}
+import {LoginRequest, RegisterRequest, SocialLoginRequest, VKLoginProps} from './types';
 
 const registerController = async (req: Request<any, any, RegisterRequest>, res: Response, next: NextFunction) => {
   try {
@@ -82,6 +72,71 @@ const loginController = async (req: Request<any, any, LoginRequest>, res: Respon
   }
 };
 
+const socialLoginController = async (req: Request<any, any, SocialLoginRequest>, res: Response) => {
+  const {social, silence_token, uuid} = req.body;
+
+  switch (social) {
+    case 'VK': {
+      try {
+        const versionApi = '5.131';
+
+        const searchParams = new URLSearchParams({
+          v: versionApi,
+          uuid: uuid as string,
+          token: silence_token,
+          access_token: process.env['VK_ACCESS_TOKEN'] as string,
+        });
+
+        const silence_auth = await fetch(
+          `https://api.vk.com/method/auth.exchangeSilentAuthToken?${searchParams.toString()}`,
+        ).then((data) => data.json());
+
+        const profile: VKLoginProps = await fetch(
+          `https://api.vk.com/method/account.getProfileInfo?v=${versionApi}&access_token=${silence_auth.response?.access_token}`,
+        ).then((data) => data.json());
+
+        const user = await UserModel.findOne({email: profile.response.mail});
+
+        if (!user) {
+          const userModel = new UserModel({
+            name: `${profile.response.first_name} ${profile.response.last_name}`,
+            email: profile.response.mail,
+            avatarUrl: profile.response.photo_200 ?? '',
+            password: silence_auth.response?.access_token,
+          });
+          const doc = await userModel.save();
+
+          const token = jwt.sign({_id: doc._id}, `${process.env.JWT_SECRET}`);
+          const {password: _pass, ...otherData} = doc.toObject();
+
+          sendSuccess(res, {
+            ...otherData,
+            token,
+          });
+        } else {
+          const token = jwt.sign(
+            {
+              _id: user._id,
+            },
+            `${process.env.JWT_SECRET}`,
+            {
+              expiresIn: '30d',
+            },
+          );
+          const {password, ...otherInfo} = user.toObject();
+
+          return sendSuccess(res, {...otherInfo, token});
+        }
+      } catch (e) {
+        console.error(e);
+        sendError({res, errorCode: 401, messageText: 'Не удалось авторизоваться через VK'});
+      }
+      break;
+    }
+    case 'Yandex':
+  }
+};
+
 export const getMeController = async (req: Request<any, any, LoginRequest>, res: Response) => {
   try {
     const token = req.headers.token as string;
@@ -107,4 +162,5 @@ export const authController = {
   registerController,
   loginController,
   getMeController,
+  socialLoginController,
 };
