@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 import UserModel from '../models/users';
 import {sendError, sendSuccess} from '../utils/SendError';
 import {saveCache} from '../utils/SaveCache';
-import {LoginRequest, RegisterRequest, SocialLoginRequest, VKLoginProps, YandexResponse} from './types';
+import {LoginRequest, RegisterRequest, SocialLoginRequest, UpdateRequest, VKLoginProps, YandexResponse} from './types';
 
 const registerController = async (req: Request<any, any, RegisterRequest>, res: Response, next: NextFunction) => {
   try {
@@ -174,7 +174,10 @@ const socialLoginController = async (req: Request<any, any, SocialLoginRequest>,
 
           return sendSuccess(res, {...otherInfo, token});
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error(e);
+        sendError({res, errorCode: 401, messageText: 'Не удалось авторизоваться через Yandex'});
+      }
     }
   }
 };
@@ -200,9 +203,43 @@ export const getMeController = async (req: Request<any, any, LoginRequest>, res:
   }
 };
 
+export const updateProfile = async (req: Request<any, any, UpdateRequest>, res: Response) => {
+  try {
+    const token = req.headers.token as string;
+    const id = jwt.verify(token, `${process.env.JWT_SECRET}`) as {_id: string};
+
+    const user = await UserModel.findById(id);
+
+    if (!user || !req.body) {
+      console.error('не получилось получить пользователя');
+      return sendError({res, errorCode: 403, messageText: 'Доступ закрыт'});
+    }
+    for (let [key, value] of Object.entries(req.body)) {
+      if (value && key !== 'password') {
+        user.set(key, value);
+      }
+
+      if(key === 'password'){
+        const salt = await bcrypt.genSalt();
+        const passHash = await bcrypt.hash(value, salt);
+        user.set(key, passHash)
+      }
+    }
+
+    await user.save();
+    const {password, accounts, ...userInfo} = user.toObject();
+    saveCache(req, userInfo);
+    sendSuccess(res, userInfo);
+  } catch (e) {
+    console.error(e);
+    sendError({res, errorCode: 403, messageText: 'Доступ закрыт'});
+  }
+};
+
 export const authController = {
   registerController,
   loginController,
   getMeController,
   socialLoginController,
+  updateProfile,
 };

@@ -10,6 +10,12 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface UpdateRequest {
+  name?:string;
+  avatarUrl?:string;
+  password?:string;
+}
+
 export interface SocialLoginRequest {
   social: 'VK' | 'Yandex';
   silence_token: string;
