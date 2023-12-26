@@ -11,9 +11,9 @@ export interface LoginRequest {
 }
 
 export interface UpdateRequest {
-  name?:string;
-  avatarUrl?:string;
-  password?:string;
+  name?: string;
+  avatarUrl?: string;
+  password?: string;
 }
 
 export interface SocialLoginRequest {

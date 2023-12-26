@@ -5,6 +5,7 @@ import UserModel from '../models/users';
 import {sendError, sendSuccess} from '../utils/SendError';
 import {saveCache} from '../utils/SaveCache';
 import {LoginRequest, RegisterRequest, SocialLoginRequest, UpdateRequest, VKLoginProps, YandexResponse} from './types';
+import send from 'send';
 
 const registerController = async (req: Request<any, any, RegisterRequest>, res: Response, next: NextFunction) => {
   try {
@@ -95,12 +96,15 @@ const socialLoginController = async (req: Request<any, any, SocialLoginRequest>,
           `https://api.vk.com/method/account.getProfileInfo?v=${versionApi}&access_token=${silence_auth.response?.access_token}`,
         ).then((data) => data.json());
 
-        const user = await UserModel.findOne({email: profile.response.mail});
+        const email = profile.response.mail || silence_auth.response.email;
+        if (!email) sendError({res, errorCode: 500, messageText: 'Авторизация через VK временно недоступна'});
+
+        const user = await UserModel.findOne({email: email});
 
         if (!user) {
           const userModel = new UserModel({
             name: `${profile.response.first_name} ${profile.response.last_name}`,
-            email: profile.response.mail,
+            email: email,
             avatarUrl: profile.response.photo_200 ?? '',
             password: silence_auth.response?.access_token,
           });
@@ -219,10 +223,10 @@ export const updateProfile = async (req: Request<any, any, UpdateRequest>, res: 
         user.set(key, value);
       }
 
-      if(key === 'password'){
+      if (key === 'password') {
         const salt = await bcrypt.genSalt();
         const passHash = await bcrypt.hash(value, salt);
-        user.set(key, passHash)
+        user.set(key, passHash);
       }
     }
 

@@ -1,11 +1,22 @@
 import mongoose from 'mongoose';
+const AccountEntries = new mongoose.Schema(
+  {
+    login: String,
+    password: String,
+    iconSrc: String,
+  },
+  {
+    timestamps: true,
+  },
+);
 
-const AccountSchema = new mongoose.Schema({
-  login: String,
-  password: String,
-  iconSrc: String,
-  socialName: String,
-});
+const AccountSchema = new mongoose.Schema(
+  {
+    socialName: String,
+    accountEntries: [AccountEntries],
+  },
+  {timestamps: true},
+);
 
 const users = new mongoose.Schema(
   {

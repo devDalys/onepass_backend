@@ -3,28 +3,48 @@ import UserModel from '../models/users';
 import jwt from 'jsonwebtoken';
 import {sendError, sendSuccess} from '../utils/SendError';
 import {saveCache} from '../utils/SaveCache';
+import bcrypt from 'bcrypt';
 
 interface Account {
   login: string;
   password: string;
   iconSrc: string;
   socialName: string;
-  _id?: string;
+  _id: string;
 }
 
 const addAccount = async (req: Request<any, any, Account>, res: Response, next: NextFunction) => {
   try {
     const token = req.headers.token as string;
     const id = jwt.verify(token, `${process.env.JWT_SECRET}`) as {_id: string};
+    const {password, ...accountBody} = req.body;
+    const hashPassword = jwt.sign(password, `${process.env.JWT_SECRET}`);
 
-    await UserModel.updateOne(
-      {_id: id},
-      {
-        $push: {
-          accounts: req.body,
-        },
-      },
+    const user = await UserModel.findById(id._id);
+    if (!user) {
+      return sendError({res, errorCode: 403, messageText: 'Доступ закрыт'});
+    }
+
+    const existedAccounts = user.accounts.find(
+      (item) => item?.socialName?.toLowerCase().trim() === req.body.socialName.toLowerCase().trim(),
     );
+
+    if (existedAccounts) {
+      existedAccounts.accountEntries.push({...req.body, password: hashPassword});
+      await user.save();
+    } else {
+      user.accounts.push({
+        socialName: req.body.socialName,
+        accountEntries: [
+          {
+            ...accountBody,
+            password: hashPassword,
+          },
+        ],
+      });
+      await user.save();
+    }
+
     sendSuccess(res, {msg: 'Аккаунт успешно добавлен'});
   } catch (e) {
     sendError({res, messageText: 'Не удалось добавить аккаунт', errorCode: 500});
@@ -36,12 +56,21 @@ const getAccounts = async (req: Request, res: Response, next: NextFunction) => {
     const token = req.headers.token as string;
     const id = jwt.verify(token, `${process.env.JWT_SECRET}`) as {_id: string};
     const user = await UserModel.findById(id);
+
     if (user && 'accounts' in user) {
-      saveCache(req, {body: user.accounts});
-      sendSuccess(res, {body: user.accounts});
+      const decodedAccounts = user.accounts.map((account) => ({
+        ...account.toObject(),
+        accountEntries: account.accountEntries.map((accountEntity) => ({
+          ...accountEntity.toObject(),
+          password: jwt.verify(accountEntity.password as string, `${process.env.JWT_SECRET}`),
+        })),
+      }));
+
+      saveCache(req, {body: decodedAccounts});
+      sendSuccess(res, {body: decodedAccounts});
     } else {
       console.error('Не удалось получить аккаунты');
-      sendError({res, errorCode: 500, messageText: 'Аккаунтов нет'});
+      sendError({res, errorCode: 403, messageText: 'Доступ закрыт'});
     }
   } catch (e) {
     console.error(e);
@@ -53,18 +82,19 @@ export const updateAccount = async (req: Request<any, any, Account>, res: Respon
   try {
     const token = req.headers.token as string;
     const userId = jwt.verify(token, `${process.env.JWT_SECRET}`) as {_id: string};
-
     const user = await UserModel.findById(userId);
-    const accountIndex = user?.accounts.findIndex((item) => item._id?.equals(req.body?._id as string));
-    const account = user?.accounts.find((item) => item._id?.equals(req.body?._id as string));
-    if (user?.accounts && account) {
-      account.login = req.body.login;
-      account.password = req.body.password;
-      account.socialName = req.body.socialName;
+    const {_id, password, login} = req.body;
 
-      user?.accounts.set(accountIndex as number, account);
-      user?.save();
+    const account = user?.accounts
+      .flatMap((account) => account.accountEntries)
+      .find((entry) => entry?._id?.equals(_id));
 
+    if (account && user) {
+      const hashPassword = jwt.sign(password, `${process.env.JWT_SECRET}`);
+
+      Object.assign(account, {login: login, password: hashPassword});
+
+      await user.save();
       sendSuccess(res, {
         body: account,
       });
@@ -87,8 +117,17 @@ const deleteAccount = async (req: Request<any, any, any>, res: Response, next: N
     const user = await UserModel.findById(userId);
 
     if (user) {
-      user.accounts.pull({_id: accountId});
-      user.save();
+      const accounts = user.accounts.find((account) =>
+        account.accountEntries.find((entry) => entry?._id?.equals(accountId)),
+      );
+
+      if (accounts?.accountEntries.length !== 1) {
+        accounts?.accountEntries?.pull({_id: accountId});
+      } else {
+        accounts.deleteOne();
+      }
+
+      await user.save();
       sendSuccess(res, {msg: 'Аккаунт успешно удалён'});
     } else {
       sendError({res, errorCode: 500, messageText: 'Что-то пошло не так'});
