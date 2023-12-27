@@ -99,8 +99,8 @@ export const updateAccount = async (req: Request<any, any, Account>, res: Respon
         body: account,
       });
     } else {
-      sendError({res, errorCode: 404, messageText: 'Не найдено'});
-      console.error('Произошла ошибка добавления аккаунта');
+      sendError({res, errorCode: 500, messageText: 'Не найдено'});
+      console.error('Произошла ошибка редактирования аккаунта');
     }
   } catch (e) {
     sendError({res, errorCode: 500, messageText: 'Что-то пошло не так'});
