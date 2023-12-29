@@ -1,13 +1,12 @@
-import {Request, Response, NextFunction} from 'express';
+import {Request, Response} from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import UserModel from '../models/users';
 import {sendError, sendSuccess} from '../utils/SendError';
 import {saveCache} from '../utils/SaveCache';
 import {LoginRequest, RegisterRequest, SocialLoginRequest, UpdateRequest, VKLoginProps, YandexResponse} from './types';
-import send from 'send';
 
-const registerController = async (req: Request<any, any, RegisterRequest>, res: Response, next: NextFunction) => {
+const registerController = async (req: Request<any, any, RegisterRequest>, res: Response) => {
   try {
     const {
       body: {name, password, email},
@@ -76,6 +75,51 @@ const loginController = async (req: Request<any, any, LoginRequest>, res: Respon
 const socialLoginController = async (req: Request<any, any, SocialLoginRequest>, res: Response) => {
   const {social, silence_token, uuid} = req.body;
 
+  const socialLogin = async ({
+    email,
+    name,
+    password,
+    avatarUrl,
+  }: {
+    name: string;
+    email: string;
+    avatarUrl: string;
+    password: string;
+  }) => {
+    const user = await UserModel.findOne({email: email});
+
+    if (!user) {
+      const userModel = new UserModel({
+        name: name,
+        email: email,
+        avatarUrl: avatarUrl ?? '',
+        password: password,
+      });
+      const doc = await userModel.save();
+
+      const token = jwt.sign({_id: doc._id}, `${process.env.JWT_SECRET}`);
+      const {password: _pass, ...otherData} = doc.toObject();
+
+      sendSuccess(res, {
+        ...otherData,
+        token,
+      });
+    } else {
+      const token = jwt.sign(
+        {
+          _id: user._id,
+        },
+        `${process.env.JWT_SECRET}`,
+        {
+          expiresIn: '30d',
+        },
+      );
+      const {password, ...otherInfo} = user.toObject();
+
+      return sendSuccess(res, {...otherInfo, token});
+    }
+  };
+
   switch (social) {
     case 'VK': {
       try {
@@ -99,38 +143,12 @@ const socialLoginController = async (req: Request<any, any, SocialLoginRequest>,
         const email = profile.response.mail || silence_auth.response.email;
         if (!email) sendError({res, errorCode: 500, messageText: 'Авторизация через VK временно недоступна'});
 
-        const user = await UserModel.findOne({email: email});
-
-        if (!user) {
-          const userModel = new UserModel({
-            name: `${profile.response.first_name} ${profile.response.last_name}`,
-            email: email,
-            avatarUrl: profile.response.photo_200 ?? '',
-            password: silence_auth.response?.access_token,
-          });
-          const doc = await userModel.save();
-
-          const token = jwt.sign({_id: doc._id}, `${process.env.JWT_SECRET}`);
-          const {password: _pass, ...otherData} = doc.toObject();
-
-          sendSuccess(res, {
-            ...otherData,
-            token,
-          });
-        } else {
-          const token = jwt.sign(
-            {
-              _id: user._id,
-            },
-            `${process.env.JWT_SECRET}`,
-            {
-              expiresIn: '30d',
-            },
-          );
-          const {password, ...otherInfo} = user.toObject();
-
-          return sendSuccess(res, {...otherInfo, token});
-        }
+        await socialLogin({
+          name: `${profile.response.first_name} ${profile.response.last_name}`,
+          email: email,
+          avatarUrl: profile.response.photo_200,
+          password: silence_auth.response?.access_token,
+        });
       } catch (e) {
         console.error(e);
         sendError({res, errorCode: 401, messageText: 'Не удалось авторизоваться через VK'});
@@ -142,42 +160,15 @@ const socialLoginController = async (req: Request<any, any, SocialLoginRequest>,
         const data: YandexResponse = await fetch('https://login.yandex.ru/info?format=json', {
           headers: {Authorization: `OAuth ${silence_token}`},
         }).then((data) => data.json());
-
-        const user = await UserModel.findOne({email: data.default_email});
         const avatarUrl = data.is_avatar_empty
           ? ''
           : `https://avatars.mds.yandex.net/get-yapic/${data.default_avatar_id}/islands-200`;
-
-        if (!user) {
-          const userModel = new UserModel({
-            name: data.real_name,
-            email: data.default_email,
-            avatarUrl: avatarUrl,
-            password: silence_token,
-          });
-          const doc = await userModel.save();
-
-          const token = jwt.sign({_id: doc._id}, `${process.env.JWT_SECRET}`);
-          const {password: _pass, ...otherData} = doc.toObject();
-
-          sendSuccess(res, {
-            ...otherData,
-            token,
-          });
-        } else {
-          const token = jwt.sign(
-            {
-              _id: user._id,
-            },
-            `${process.env.JWT_SECRET}`,
-            {
-              expiresIn: '30d',
-            },
-          );
-          const {password, ...otherInfo} = user.toObject();
-
-          return sendSuccess(res, {...otherInfo, token});
-        }
+        await socialLogin({
+          name: data.real_name,
+          email: data.default_email,
+          avatarUrl: avatarUrl,
+          password: silence_token,
+        });
       } catch (e) {
         console.error(e);
         sendError({res, errorCode: 401, messageText: 'Не удалось авторизоваться через Yandex'});
